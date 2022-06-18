@@ -3,9 +3,9 @@
 # Add project specific python requirements to this file.
 # Do not commit them in the project!
 
-pyhamcrest==1.8.0
+pyhamcrest==2.0.3
 pytz>=2014
-pytest==3.0.6
+pytest==7.1.2
 mock==3.0.5
 pyformance==0.3.2
 requests
