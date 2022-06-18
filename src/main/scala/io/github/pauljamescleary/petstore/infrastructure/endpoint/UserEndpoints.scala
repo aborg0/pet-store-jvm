@@ -14,11 +14,10 @@ import domain._
 import domain.users._
 import domain.authentication._
 import tsec.common.Verified
-import tsec.jwt.algorithms.JWTMacAlgo
 import tsec.passwordhashers.{PasswordHash, PasswordHasher}
 import tsec.authentication._
 
-class UserEndpoints[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
+class UserEndpoints[F[_]: Sync, A, Auth] extends Http4sDsl[F] {
   import Pagination._
 
   /* Jsonization of our User type */
@@ -138,7 +137,7 @@ class UserEndpoints[F[_]: Sync, A, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 }
 
 object UserEndpoints {
-  def endpoints[F[_]: Sync, A, Auth: JWTMacAlgo](
+  def endpoints[F[_]: Sync, A, Auth](
       userService: UserService[F],
       cryptService: PasswordHasher[F, A],
       auth: SecuredRequestHandler[F, Long, User, AugmentedJWT[Auth, Long]],

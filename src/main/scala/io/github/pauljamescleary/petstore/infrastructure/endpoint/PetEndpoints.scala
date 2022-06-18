@@ -15,10 +15,9 @@ import org.http4s.{EntityDecoder, HttpRoutes, QueryParamDecoder}
 import domain.{PetAlreadyExistsError, PetNotFoundError}
 import domain.pets.{Pet, PetService, PetStatus}
 import io.github.pauljamescleary.petstore.domain.users.User
-import tsec.jwt.algorithms.JWTMacAlgo
 import tsec.authentication._
 
-class PetEndpoints[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
+class PetEndpoints[F[_]: Sync, Auth] extends Http4sDsl[F] {
   import Pagination._
 
   /* Parses out status query param which could be multi param */
@@ -137,7 +136,7 @@ class PetEndpoints[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 }
 
 object PetEndpoints {
-  def endpoints[F[_]: Sync, Auth: JWTMacAlgo](
+  def endpoints[F[_]: Sync, Auth](
       petService: PetService[F],
       auth: SecuredRequestHandler[F, Long, User, AugmentedJWT[Auth, Long]],
   ): HttpRoutes[F] =

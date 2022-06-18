@@ -14,9 +14,8 @@ import domain.authentication.Auth
 import domain.orders.{Order, OrderService}
 import io.github.pauljamescleary.petstore.domain.users.User
 import tsec.authentication.{AugmentedJWT, SecuredRequestHandler, asAuthed}
-import tsec.jwt.algorithms.JWTMacAlgo
 
-class OrderEndpoints[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
+class OrderEndpoints[F[_]: Sync, Auth] extends Http4sDsl[F] {
   /* Needed to decode entities */
   implicit val orderDecoder: EntityDecoder[F, Order] = jsonOf
 
@@ -63,7 +62,7 @@ class OrderEndpoints[F[_]: Sync, Auth: JWTMacAlgo] extends Http4sDsl[F] {
 }
 
 object OrderEndpoints {
-  def endpoints[F[_]: Sync, Auth: JWTMacAlgo](
+  def endpoints[F[_]: Sync, Auth](
       orderService: OrderService[F],
       auth: SecuredRequestHandler[F, Long, User, AugmentedJWT[Auth, Long]],
   ): HttpRoutes[F] =

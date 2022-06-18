@@ -3,6 +3,8 @@ name := "scala-pet-store"
 version := "0.0.1-SNAPSHOT"
 crossScalaVersions := Seq("2.12.16", "2.13.8", "3.1.2")
 
+ThisBuild / scalaVersion := "2.13.8"
+
 resolvers += Resolver.sonatypeRepo("snapshots")
 
 val CatsVersion = "2.8.0"
