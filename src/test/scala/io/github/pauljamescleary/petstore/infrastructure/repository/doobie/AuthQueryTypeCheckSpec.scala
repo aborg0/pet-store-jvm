@@ -19,11 +19,11 @@ class AuthQueryTypeCheckSpec
   override def transactor: doobie.Transactor[IO] = testTransactor
 
   import AuthSQL._
-
+  import cats.effect.unsafe.implicits.global
   test("Typecheck auth queries") {
-    forAll { jwt: AugmentedJWT[HMACSHA256, Long] => check(insert(jwt)) }
-    forAll { jwt: AugmentedJWT[HMACSHA256, Long] => check(update(jwt)) }
-    forAll { id: SecureRandomId => check(select(id)) }
-    forAll { id: SecureRandomId => check(delete(id)) }
+    forAll { (jwt: AugmentedJWT[HMACSHA256, Long]) => check(insert(jwt)) }
+    forAll { (jwt: AugmentedJWT[HMACSHA256, Long]) => check(update(jwt)) }
+    forAll { (id: SecureRandomId) => check(select(id)) }
+    forAll { (id: SecureRandomId) => check(delete(id)) }
   }
 }

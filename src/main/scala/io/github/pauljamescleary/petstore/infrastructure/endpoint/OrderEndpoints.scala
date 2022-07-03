@@ -2,20 +2,20 @@ package io.github.pauljamescleary.petstore
 package infrastructure.endpoint
 
 import cats.effect.Sync
-import cats.syntax.all._
-import io.circe.generic.auto._
-import io.circe.syntax._
-import org.http4s._
-import org.http4s.circe._
+import cats.effect.kernel.Concurrent
+import cats.syntax.all.*
+import io.circe.generic.auto.*
+import io.circe.syntax.*
+import org.http4s.*
+import org.http4s.circe.*
 import org.http4s.dsl.Http4sDsl
-
 import domain.OrderNotFoundError
 import domain.authentication.Auth
 import domain.orders.{Order, OrderService}
 import io.github.pauljamescleary.petstore.domain.users.User
 import tsec.authentication.{AugmentedJWT, SecuredRequestHandler, asAuthed}
 
-class OrderEndpoints[F[_]: Sync, Auth] extends Http4sDsl[F] {
+class OrderEndpoints[F[_]: Concurrent, Auth] extends Http4sDsl[F] {
   /* Needed to decode entities */
   implicit val orderDecoder: EntityDecoder[F, Order] = jsonOf
 
@@ -62,7 +62,7 @@ class OrderEndpoints[F[_]: Sync, Auth] extends Http4sDsl[F] {
 }
 
 object OrderEndpoints {
-  def endpoints[F[_]: Sync, Auth](
+  def endpoints[F[_]: Concurrent, Auth](
       orderService: OrderService[F],
       auth: SecuredRequestHandler[F, Long, User, AugmentedJWT[Auth, Long]],
   ): HttpRoutes[F] =

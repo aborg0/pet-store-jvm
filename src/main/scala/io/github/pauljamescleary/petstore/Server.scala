@@ -1,20 +1,16 @@
 package io.github.pauljamescleary.petstore
 
-import config._
-import domain.users._
-import domain.orders._
-import domain.pets._
-import infrastructure.endpoint._
-import infrastructure.repository.doobie.{
-  DoobieAuthRepositoryInterpreter,
-  DoobieOrderRepositoryInterpreter,
-  DoobiePetRepositoryInterpreter,
-  DoobieUserRepositoryInterpreter,
-}
-import cats.effect._
-import org.http4s.server.{Router, Server => H4Server}
-import org.http4s.server.blaze.BlazeServerBuilder
-import org.http4s.implicits._
+import config.*
+import domain.users.*
+import domain.orders.*
+import domain.pets.*
+import infrastructure.endpoint.*
+import infrastructure.repository.doobie.{DoobieAuthRepositoryInterpreter, DoobieOrderRepositoryInterpreter, DoobiePetRepositoryInterpreter, DoobieUserRepositoryInterpreter}
+import cats.effect.*
+import cats.effect.std.Dispatcher
+import org.http4s.server.{Router, Server as H4Server}
+import org.http4s.blaze.server.BlazeServerBuilder
+import org.http4s.implicits.*
 import tsec.passwordhashers.jca.BCrypt
 import doobie.util.ExecutionContexts
 import io.circe.config.parser
@@ -23,13 +19,15 @@ import tsec.authentication.SecuredRequestHandler
 import tsec.mac.jca.HMACSHA256
 
 object Server extends IOApp {
-  def createServer[F[_]: ContextShift: ConcurrentEffect: Timer]: Resource[F, H4Server[F]] =
+  type DispatcherF[F[_]] = Dispatcher[F]
+
+  def createServer[F[_]: Async]: Resource[F, H4Server] =
     for {
       conf <- Resource.eval(parser.decodePathF[F, PetStoreConfig]("petstore"))
       serverEc <- ExecutionContexts.cachedThreadPool[F]
       connEc <- ExecutionContexts.fixedThreadPool[F](conf.db.connections.poolSize)
       txnEc <- ExecutionContexts.cachedThreadPool[F]
-      xa <- DatabaseConfig.dbTransactor(conf.db, connEc, Blocker.liftExecutionContext(txnEc))
+      xa <- DatabaseConfig.dbTransactor(conf.db, connEc).evalOn(txnEc)
       key <- Resource.eval(HMACSHA256.generateKey[F])
       authRepo = DoobieAuthRepositoryInterpreter[F, HMACSHA256](key, xa)
       petRepo = DoobiePetRepositoryInterpreter[F](xa)
@@ -49,11 +47,14 @@ object Server extends IOApp {
         "/orders" -> OrderEndpoints.endpoints[F, HMACSHA256](orderService, routeAuth),
       ).orNotFound
       _ <- Resource.eval(DatabaseConfig.initializeDb(conf.db))
-      server <- BlazeServerBuilder[F](serverEc)
+      server <- BlazeServerBuilder[F].withExecutionContext(serverEc)
         .bindHttp(conf.server.port, conf.server.host)
         .withHttpApp(httpApp)
         .resource
     } yield server
 
-  def run(args: List[String]): IO[ExitCode] = createServer.use(_ => IO.never).as(ExitCode.Success)
+  def run(args: List[String]): IO[ExitCode] = {
+    val server: Resource[IO, H4Server] = createServer
+    server.use(_ => IO.never).as(ExitCode.Success)
+  }
 }

@@ -27,7 +27,7 @@ class PetEndpointsSpec
     with Http4sClientDsl[IO] {
   implicit val petEnc: EntityEncoder[IO, Pet] = jsonEncoderOf
   implicit val petDec: EntityDecoder[IO, Pet] = jsonOf
-
+  import cats.effect.unsafe.implicits.global
   def getTestResources(): (AuthTest[IO], HttpApp[IO], PetRepositoryInMemoryInterpreter[IO]) = {
     val userRepo = UserRepositoryInMemoryInterpreter[IO]()
     val petRepo = PetRepositoryInMemoryInterpreter[IO]()
@@ -42,29 +42,30 @@ class PetEndpointsSpec
   test("create pet") {
     val (auth, petRoutes, _) = getTestResources()
 
-    forAll { pet: Pet =>
+    forAll { (pet: Pet) =>
       (for {
-        request <- POST(pet, uri"/pets")
-        response <- petRoutes.run(request)
+//        request <- POST(pet, uri"/pets")
+        response <- petRoutes.run(POST(pet, uri"/pets"))
       } yield response.status shouldEqual Unauthorized).unsafeRunSync()
     }
 
     forAll { (pet: Pet, user: User) =>
       (for {
-        request <- POST(pet, uri"/pets")
-          .flatMap(auth.embedToken(user, _))
+//        request <- POST(pet, uri"/pets")
+//          .flatMap(auth.embedToken(user, _))
+        request <- auth.embedToken(user, POST(pet, uri"/pets"))
         response <- petRoutes.run(request)
       } yield response.status shouldEqual Ok).unsafeRunSync()
     }
 
     forAll { (pet: Pet, user: User) =>
       (for {
-        createRq <- POST(pet, uri"/pets")
-          .flatMap(auth.embedToken(user, _))
+//        createRq <- POST(pet, uri"/pets")
+        createRq <- auth.embedToken(user, POST(pet, uri"/pets"))
         response <- petRoutes.run(createRq)
         createdPet <- response.as[Pet]
-        getRq <- GET(Uri.unsafeFromString(s"/pets/${createdPet.id.get}"))
-          .flatMap(auth.embedToken(user, _))
+        getRq <- auth.embedToken(user, GET(Uri.unsafeFromString(s"/pets/${createdPet.id.get}")))
+//          .flatMap(auth.embedToken(user, _))
         response2 <- petRoutes.run(getRq)
       } yield {
         response.status shouldEqual Ok
@@ -78,13 +79,15 @@ class PetEndpointsSpec
 
     forAll { (pet: Pet, user: AdminUser) =>
       (for {
-        createRequest <- POST(pet, uri"/pets")
-          .flatMap(auth.embedToken(user.value, _))
+//        createRequest <- POST(pet, uri"/pets")
+        createRequest <-auth.embedToken(user.value, POST(pet, uri"/pets"))
+//          .flatMap(auth.embedToken(user.value, _))
         createResponse <- petRoutes.run(createRequest)
         createdPet <- createResponse.as[Pet]
         petToUpdate = createdPet.copy(name = createdPet.name.reverse)
-        updateRequest <- PUT(petToUpdate, Uri.unsafeFromString(s"/pets/${petToUpdate.id.get}"))
-          .flatMap(auth.embedToken(user.value, _))
+//        updateRequest <- PUT(petToUpdate, Uri.unsafeFromString(s"/pets/${petToUpdate.id.get}"))
+        updateRequest <- auth.embedToken(user.value, PUT(petToUpdate, Uri.unsafeFromString(s"/pets/${petToUpdate.id.get}")))
+//          .flatMap(auth.embedToken(user.value, _))
         updateResponse <- petRoutes.run(updateRequest)
         updatedPet <- updateResponse.as[Pet]
       } yield updatedPet.name shouldEqual pet.name.reverse).unsafeRunSync()
@@ -96,8 +99,9 @@ class PetEndpointsSpec
 
     forAll { (pet: Pet, user: AdminUser) =>
       (for {
-        createRequest <- POST(pet, uri"/pets")
-          .flatMap(auth.embedToken(user.value, _))
+//        createRequest <- POST(pet, uri"/pets")
+        createRequest <- auth.embedToken(user.value, POST(pet, uri"/pets"))
+//          .flatMap(auth.embedToken(user.value, _))
         createResponse <- petRoutes.run(createRequest)
         createdPet <- createResponse.as[Pet]
       } yield createdPet.tags.toList.headOption match {

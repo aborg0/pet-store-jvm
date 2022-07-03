@@ -2,17 +2,17 @@ package io.github.pauljamescleary.petstore
 package infrastructure.repository.doobie
 
 import cats.data.OptionT
-import cats.effect.Bracket
-import cats.syntax.all._
-import doobie._
-import doobie.implicits._
-import doobie.implicits.legacy.instant._
+import cats.effect.{MonadCancel, MonadCancelThrow}
+import cats.syntax.all.*
+import doobie.*
+import doobie.implicits.*
+import doobie.implicits.legacy.instant.*
 import domain.orders.{Order, OrderRepositoryAlgebra, OrderStatus}
 
 private object OrderSQL {
   /* We require type StatusMeta to handle our ADT Status */
   implicit val StatusMeta: Meta[OrderStatus] =
-    Meta[String].imap(OrderStatus.withName)(_.entryName)
+    Meta[String].imap(OrderStatus.valueOf)(_.toString)
 
   def select(orderId: Long): Query0[Order] = sql"""
     SELECT PET_ID, SHIP_DATE, STATUS, COMPLETE, ID, USER_ID
@@ -31,7 +31,7 @@ private object OrderSQL {
   """.update
 }
 
-class DoobieOrderRepositoryInterpreter[F[_]: Bracket[*[_], Throwable]](val xa: Transactor[F])
+class DoobieOrderRepositoryInterpreter[F[_]: MonadCancelThrow](val xa: Transactor[F])
     extends OrderRepositoryAlgebra[F] {
   import OrderSQL._
 
@@ -51,7 +51,7 @@ class DoobieOrderRepositoryInterpreter[F[_]: Bracket[*[_], Throwable]](val xa: T
 }
 
 object DoobieOrderRepositoryInterpreter {
-  def apply[F[_]: Bracket[*[_], Throwable]](
+  def apply[F[_]: MonadCancelThrow](
       xa: Transactor[F],
   ): DoobieOrderRepositoryInterpreter[F] =
     new DoobieOrderRepositoryInterpreter(xa)

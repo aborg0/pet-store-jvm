@@ -1,18 +1,18 @@
 package io.github.pauljamescleary.petstore
 package infrastructure.repository.doobie
 
-import cats.data._
-import cats.syntax.all._
-import doobie._
-import doobie.implicits._
+import cats.data.*
+import cats.syntax.all.*
+import doobie.*
+import doobie.implicits.*
 import domain.pets.{Pet, PetRepositoryAlgebra, PetStatus}
-import SQLPagination._
-import cats.effect.Bracket
+import SQLPagination.*
+import cats.effect.MonadCancelThrow
 
 private object PetSQL {
   /* We require type StatusMeta to handle our ADT Status */
   implicit val StatusMeta: Meta[PetStatus] =
-    Meta[String].imap(PetStatus.withName)(_.entryName)
+    Meta[String].imap(PetStatus.valueOf)(_.toString)
 
   /* This is used to marshal our sets of strings */
   implicit val SetStringMeta: Meta[Set[String]] =
@@ -72,7 +72,7 @@ private object PetSQL {
   }
 }
 
-class DoobiePetRepositoryInterpreter[F[_]: Bracket[*[_], Throwable]](val xa: Transactor[F])
+class DoobiePetRepositoryInterpreter[F[_]: MonadCancelThrow](val xa: Transactor[F])
     extends PetRepositoryAlgebra[F] {
   import PetSQL._
 
@@ -105,6 +105,6 @@ class DoobiePetRepositoryInterpreter[F[_]: Bracket[*[_], Throwable]](val xa: Tra
 }
 
 object DoobiePetRepositoryInterpreter {
-  def apply[F[_]: Bracket[*[_], Throwable]](xa: Transactor[F]): DoobiePetRepositoryInterpreter[F] =
+  def apply[F[_]: MonadCancelThrow](xa: Transactor[F]): DoobiePetRepositoryInterpreter[F] =
     new DoobiePetRepositoryInterpreter(xa)
 }

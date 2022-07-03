@@ -1,41 +1,41 @@
 organization := "io.github.pauljamescleary"
 name := "scala-pet-store"
 version := "0.0.1-SNAPSHOT"
-crossScalaVersions := Seq("2.12.16", "2.13.8", "3.1.2")
+//crossScalaVersions := Seq("3.1.2")
 
-ThisBuild / scalaVersion := "2.13.8"
+/*ThisBuild / */scalaVersion := "3.1.2"
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 
 val CatsVersion = "2.8.0"
 val CirceVersion = "0.14.2"
-val CirceGenericExVersion = "0.14.2"
-val CirceConfigVersion = "0.8.0"
-val DoobieVersion = "0.13.4"
-val EnumeratumCirceVersion = "1.7.0"
+//val CirceGenericExVersion = "0.14.2"
+val CirceConfigVersion = "0.9.0"
+val DoobieVersion = "1.0.0-RC2"
+//val EnumeratumCirceVersion = "1.7.0"
 val H2Version = "2.1.214"
-val Http4sVersion = "0.21.28"
+val Http4sVersion = "0.23.12"
 val KindProjectorVersion = "0.13.2"
-val LogbackVersion = "1.2.6"
+val LogbackVersion = "1.2.11"
 val Slf4jVersion = "1.7.36"
 val ScalaCheckVersion = "1.16.0"
 val ScalaTestVersion = "3.2.12"
 val ScalaTestPlusVersion = "3.2.12.0"
 val FlywayVersion = "8.5.13"
-val TsecVersion = "0.2.1"
+val TsecVersion = "0.4.0"
 
 libraryDependencies ++= Seq(
   "org.typelevel" %% "cats-core" % CatsVersion,
   "io.circe" %% "circe-generic" % CirceVersion,
   "io.circe" %% "circe-literal" % CirceVersion,
-  "io.circe" %% "circe-generic-extras" % CirceGenericExVersion,
+//  "io.circe" %% "circe-generic-extras" % CirceGenericExVersion,
   "io.circe" %% "circe-parser" % CirceVersion,
-  "io.circe" %% "circe-config" % CirceConfigVersion,
+  "com.hunorkovacs" %% "circe-config" % CirceConfigVersion,
   "org.tpolecat" %% "doobie-core" % DoobieVersion,
   "org.tpolecat" %% "doobie-h2" % DoobieVersion,
   "org.tpolecat" %% "doobie-scalatest" % DoobieVersion,
   "org.tpolecat" %% "doobie-hikari" % DoobieVersion,
-  "com.beachape" %% "enumeratum-circe" % EnumeratumCirceVersion,
+//  "com.beachape" %% "enumeratum-circe" % EnumeratumCirceVersion,
   "com.h2database" % "h2" % H2Version,
   "org.http4s" %% "http4s-blaze-server" % Http4sVersion,
   "org.http4s" %% "http4s-circe" % Http4sVersion,
@@ -58,9 +58,9 @@ libraryDependencies ++= Seq(
 
 dependencyOverrides += "org.slf4j" % "slf4j-api" % Slf4jVersion
 
-addCompilerPlugin(
-  ("org.typelevel" %% "kind-projector" % KindProjectorVersion).cross(CrossVersion.full),
-)
+//addCompilerPlugin(
+//  ("org.typelevel" %% "kind-projector" % KindProjectorVersion).cross(CrossVersion.full),
+//)
 
 enablePlugins(ScalafmtPlugin, JavaAppPackaging, GhpagesPlugin, MicrositesPlugin, MdocPlugin)
 

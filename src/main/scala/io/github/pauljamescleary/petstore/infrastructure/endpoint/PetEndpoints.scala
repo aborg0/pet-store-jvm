@@ -2,27 +2,26 @@ package io.github.pauljamescleary.petstore
 package infrastructure.endpoint
 
 import cats.data.Validated.Valid
-import cats.data._
-import cats.effect.Sync
-import cats.syntax.all._
-import io.circe.generic.auto._
-import io.circe.syntax._
+import cats.data.*
+import cats.effect.{Concurrent, Sync}
+import cats.syntax.all.*
+import io.circe.generic.auto.*
+import io.circe.syntax.*
 import io.github.pauljamescleary.petstore.domain.authentication.Auth
-import org.http4s.circe._
+import org.http4s.circe.*
 import org.http4s.dsl.Http4sDsl
 import org.http4s.{EntityDecoder, HttpRoutes, QueryParamDecoder}
-
 import domain.{PetAlreadyExistsError, PetNotFoundError}
 import domain.pets.{Pet, PetService, PetStatus}
 import io.github.pauljamescleary.petstore.domain.users.User
-import tsec.authentication._
+import tsec.authentication.*
 
-class PetEndpoints[F[_]: Sync, Auth] extends Http4sDsl[F] {
+class PetEndpoints[F[_]: Concurrent, Auth] extends Http4sDsl[F] {
   import Pagination._
 
   /* Parses out status query param which could be multi param */
   implicit val statusQueryParamDecoder: QueryParamDecoder[PetStatus] =
-    QueryParamDecoder[String].map(PetStatus.withName)
+    QueryParamDecoder[String].map(PetStatus.valueOf)
 
   /* Relies on the statusQueryParamDecoder implicit, will parse out a possible multi-value query parameter */
   object StatusMatcher extends OptionalMultiQueryParamDecoderMatcher[PetStatus]("status")
@@ -136,7 +135,7 @@ class PetEndpoints[F[_]: Sync, Auth] extends Http4sDsl[F] {
 }
 
 object PetEndpoints {
-  def endpoints[F[_]: Sync, Auth](
+  def endpoints[F[_]: Concurrent, Auth](
       petService: PetService[F],
       auth: SecuredRequestHandler[F, Long, User, AugmentedJWT[Auth, Long]],
   ): HttpRoutes[F] =
