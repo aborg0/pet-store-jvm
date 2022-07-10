@@ -34,12 +34,12 @@ trait LoginTest extends Http4sClientDsl[IO] with Http4sDsl[IO] {
       userEndpoint: HttpApp[IO],
   ): IO[(User, Option[Authorization])] =
     for {
-//      signUpRq <- POST(userSignUp, uri"/users")
-      signUpResp <- userEndpoint.run(POST(userSignUp, uri"/users"))
+      signUpRq <- IO(POST(userSignUp, uri"/users"))
+      signUpResp <- userEndpoint.run(signUpRq)
       user <- signUpResp.as[User]
       loginBody = LoginRequest(userSignUp.userName, userSignUp.password)
-//      loginRq <- POST(loginBody, uri"/users/login")
-      loginResp <- userEndpoint.run(POST(loginBody, uri"/users/login"))
+      loginRq <- IO(POST(loginBody, uri"/users/login"))
+      loginResp <- userEndpoint.run(loginRq)
     } yield user -> loginResp.headers.get[Authorization]
 
   def signUpAndLogInAsAdmin(

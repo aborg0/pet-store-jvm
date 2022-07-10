@@ -59,9 +59,9 @@ class UserEndpointsSpec
         loginResp <- signUpAndLogInAsAdmin(userSignup, userEndpoint)
         (createdUser, authorization) = loginResp
         userToUpdate = createdUser.copy(lastName = createdUser.lastName.reverse)
-//        updateUser <- PUT(userToUpdate, Uri.unsafeFromString(s"/users/${createdUser.userName}"))
-//        updateUserAuth = updateUser.putHeaders(authorization.get)
-        updateResponse <- userEndpoint.run(PUT(userToUpdate, Uri.unsafeFromString(s"/users/${createdUser.userName}")).putHeaders(authorization.get))
+        updateUser <- IO(PUT(userToUpdate, Uri.unsafeFromString(s"/users/${createdUser.userName}")))
+        updateUserAuth = updateUser.putHeaders(authorization.get)
+        updateResponse <- userEndpoint.run(updateUserAuth)
         updatedUser <- updateResponse.as[User]
       } yield {
         updateResponse.status shouldEqual Ok
@@ -78,9 +78,9 @@ class UserEndpointsSpec
       (for {
         loginResp <- signUpAndLogInAsAdmin(userSignup, userEndpoint)
         (createdUser, authorization) = loginResp
-//        getRequest <- GET(Uri.unsafeFromString(s"/users/${createdUser.userName}"))
-//        getRequestAuth = getRequest.putHeaders(authorization.get)
-        getResponse <- userEndpoint.run(GET(Uri.unsafeFromString(s"/users/${createdUser.userName}")).putHeaders(authorization.get))
+        getRequest <- IO(GET(Uri.unsafeFromString(s"/users/${createdUser.userName}")))
+        getRequestAuth = getRequest.putHeaders(authorization.get)
+        getResponse <- userEndpoint.run(getRequestAuth)
         getUser <- getResponse.as[User]
       } yield {
         getResponse.status shouldEqual Ok
@@ -96,9 +96,9 @@ class UserEndpointsSpec
       (for {
         loginResp <- signUpAndLogInAsCustomer(userSignup, userEndpoint)
         (createdUser, Some(authorization)) = loginResp
-//        deleteRequest <- DELETE(Uri.unsafeFromString(s"/users/${createdUser.userName}"))
-//        deleteRequestAuth = deleteRequest.putHeaders(authorization)
-        deleteResponse <- userEndpoint.run(DELETE(Uri.unsafeFromString(s"/users/${createdUser.userName}")).putHeaders(authorization))
+        deleteRequest = DELETE(Uri.unsafeFromString(s"/users/${createdUser.userName}"))
+        deleteRequestAuth = deleteRequest.putHeaders(authorization)
+        deleteResponse <- userEndpoint.run(deleteRequestAuth)
       } yield deleteResponse.status shouldEqual Unauthorized).unsafeRunSync()
     }
 
@@ -106,12 +106,12 @@ class UserEndpointsSpec
       (for {
         loginResp <- signUpAndLogInAsAdmin(userSignup, userEndpoint)
         (createdUser, Some(authorization)) = loginResp
-//        deleteRequest <- DELETE(Uri.unsafeFromString(s"/users/${createdUser.userName}"))
-//        deleteRequestAuth = deleteRequest.putHeaders(authorization)
-        deleteResponse <- userEndpoint.run(DELETE(Uri.unsafeFromString(s"/users/${createdUser.userName}")).putHeaders(authorization))
-//        getRequest <- GET(Uri.unsafeFromString(s"/users/${createdUser.userName}"))
-//        getRequestAuth = getRequest.putHeaders(authorization)
-        getResponse <- userEndpoint.run(GET(Uri.unsafeFromString(s"/users/${createdUser.userName}")).putHeaders(authorization))
+        deleteRequest = DELETE(Uri.unsafeFromString(s"/users/${createdUser.userName}"))
+        deleteRequestAuth = deleteRequest.putHeaders(authorization)
+        deleteResponse <- userEndpoint.run(deleteRequestAuth)
+        getRequest = GET(Uri.unsafeFromString(s"/users/${createdUser.userName}"))
+        getRequestAuth = getRequest.putHeaders(authorization)
+        getResponse <- userEndpoint.run(getRequestAuth)
       } yield {
         deleteResponse.status shouldEqual Ok
         // The user not the token longer exist

@@ -40,9 +40,9 @@ class UserEndpoints[F[_]: Concurrent, A, Auth] extends Http4sDsl[F] {
         checkResult <- EitherT.liftF(
           cryptService.checkpw(login.password, PasswordHash[A](user.hash)),
         )
-//        _ <-
-//          if (checkResult == Verified) EitherT.rightT[F, UserAuthenticationFailedError](())
-//          else EitherT.leftT[F, User](UserAuthenticationFailedError(name))
+        _ <-
+          if (checkResult == Verified) EitherT.rightT[F, UserAuthenticationFailedError](())
+          else EitherT.leftT[F, Unit](UserAuthenticationFailedError(name))
         token <- user.id match {
           case None => throw new Exception("Impossible") // User is not properly modeled
           case Some(id) => EitherT.right[UserAuthenticationFailedError](auth.create(id))

@@ -51,12 +51,12 @@ class OrderEndpointsSpec
 
     forAll { (order: Order, user: AdminUser) =>
       (for {
-//        createRq <- POST(order, uri"/orders")
-        createRqAuth <- auth.embedToken(user.value, POST(order, uri"/orders"))
+        createRq <- IO(POST(order, uri"/orders"))
+        createRqAuth <- auth.embedToken(user.value, createRq)
         createResp <- orderRoutes.run(createRqAuth)
         orderResp <- createResp.as[Order]
-//        getOrderRq <- GET(Uri.unsafeFromString(s"/orders/${orderResp.id.get}"))
-        getOrderRqAuth <- auth.embedToken(user.value, GET(Uri.unsafeFromString(s"/orders/${orderResp.id.get}")))
+        getOrderRq <- IO(GET(Uri.unsafeFromString(s"/orders/${orderResp.id.get}")))
+        getOrderRqAuth <- auth.embedToken(user.value, getOrderRq)
         getOrderResp <- orderRoutes.run(getOrderRqAuth)
         orderResp2 <- getOrderResp.as[Order]
       } yield {
@@ -73,18 +73,16 @@ class OrderEndpointsSpec
 
     forAll { (user: CustomerUser) =>
       (for {
-//        deleteRq <- DELETE(Uri.unsafeFromString(s"/orders/1"))
-//          .flatMap(auth.embedToken(user.value, _))
-        deleteRq <- auth.embedToken(user.value, DELETE(Uri.unsafeFromString(s"/orders/1")))
+        deleteRq <- IO(DELETE(Uri.unsafeFromString(s"/orders/1")))
+          .flatMap(auth.embedToken(user.value, _))
         deleteResp <- orderRoutes.run(deleteRq)
       } yield deleteResp.status shouldEqual Unauthorized).unsafeRunSync()
     }
 
     forAll { (user: AdminUser) =>
       (for {
-//        deleteRq <- DELETE(Uri.unsafeFromString(s"/orders/1"))
-//          .flatMap(auth.embedToken(user.value, _))
-        deleteRq <- auth.embedToken(user.value, DELETE(Uri.unsafeFromString(s"/orders/1")))
+        deleteRq <- IO(DELETE(Uri.unsafeFromString(s"/orders/1")))
+          .flatMap(auth.embedToken(user.value, _))
         deleteResp <- orderRoutes.run(deleteRq)
       } yield deleteResp.status shouldEqual Ok).unsafeRunSync()
     }
