@@ -20,9 +20,6 @@ trait LoginTest extends Http4sClientDsl[IO] with Http4sDsl[IO] {
   implicit val userEnc: EntityEncoder[IO, User] = jsonEncoderOf
   implicit val userDec: EntityDecoder[IO, User] = jsonOf
 
-  implicit val orderStatusEnc: EntityEncoder[IO, OrderStatus] = jsonEncoderOf
-  implicit val orderStatusDec: EntityDecoder[IO, OrderStatus] = jsonOf
-
   implicit val signUpRequestEnc: EntityEncoder[IO, SignupRequest] = jsonEncoderOf
   implicit val signUpRequestDec: EntityDecoder[IO, SignupRequest] = jsonOf
 

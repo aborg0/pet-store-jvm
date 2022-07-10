@@ -36,6 +36,7 @@ libraryDependencies ++= Seq(
   "org.tpolecat" %% "doobie-scalatest" % DoobieVersion,
   "org.tpolecat" %% "doobie-hikari" % DoobieVersion,
 //  "com.beachape" %% "enumeratum-circe" % EnumeratumCirceVersion,
+  "org.latestbit" %% "circe-tagged-adt-codec" % "0.10.1",
   "com.h2database" % "h2" % H2Version,
   "org.http4s" %% "http4s-blaze-server" % Http4sVersion,
   "org.http4s" %% "http4s-circe" % Http4sVersion,
@@ -81,3 +82,11 @@ micrositeBaseUrl := "scala-pet-store"
 run / fork := true
 
 dockerExposedPorts ++= Seq(8080)
+
+Compile / console / initialCommands := """import _root_.io.github.pauljamescleary.petstore.domain.pets._
+                                          import _root_.io.circe._
+                                          import _root_.io.circe.syntax._
+                                          import _root_.io.circe.generic.semiauto._
+                                          import _root_.cats.syntax.all._
+                                          import _root_.cats.effect.syntax._
+"""

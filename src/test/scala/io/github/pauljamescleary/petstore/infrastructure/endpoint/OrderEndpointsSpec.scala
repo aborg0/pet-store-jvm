@@ -24,9 +24,7 @@ class OrderEndpointsSpec
     with PetStoreArbitraries
     with Http4sDsl[IO]
     with Http4sClientDsl[IO] {
-  implicit val statusDecoder: Decoder[OrderStatus] = deriveDecoder
   implicit val statusDec: EntityDecoder[IO, OrderStatus] = jsonOf
-  implicit val statusEncoder: Encoder[OrderStatus] = deriveEncoder
   implicit val statusEnc: EntityEncoder[IO, OrderStatus] = jsonEncoderOf
 
   implicit val orderEncoder: Encoder[Order] = deriveEncoder
