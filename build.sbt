@@ -85,6 +85,7 @@ dockerExposedPorts ++= Seq(8080)
 
 Compile / console / initialCommands := """import _root_.io.github.pauljamescleary.petstore.domain.pets._
                                           import _root_.io.circe._
+                                          import _root_.io.circe.Json._
                                           import _root_.io.circe.syntax._
                                           import _root_.io.circe.generic.semiauto._
                                           import _root_.cats.syntax.all._
