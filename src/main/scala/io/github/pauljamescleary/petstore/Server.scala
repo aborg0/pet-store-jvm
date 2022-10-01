@@ -5,14 +5,16 @@ import domain.users.*
 import domain.orders.*
 import domain.pets.*
 import infrastructure.endpoint.*
-import infrastructure.repository.doobie.{DoobieAuthRepositoryInterpreter, DoobieOrderRepositoryInterpreter, DoobiePetRepositoryInterpreter, DoobieUserRepositoryInterpreter}
+import infrastructure.repository.quill.{AuthRepositoryInterpreter, OrderRepositoryInterpreter, PetRepositoryInterpreter, UserRepositoryInterpreter}
 import cats.effect.*
 import cats.effect.std.Dispatcher
 import org.http4s.server.{Router, Server as H4Server}
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.implicits.*
 import tsec.passwordhashers.jca.BCrypt
-import doobie.util.ExecutionContexts
+
+import scala.concurrent.ExecutionContext
+//import doobie.util.ExecutionContexts
 import io.circe.config.parser
 import domain.authentication.Auth
 import tsec.authentication.SecuredRequestHandler
@@ -21,18 +23,26 @@ import tsec.mac.jca.HMACSHA256
 object Server extends IOApp {
   type DispatcherF[F[_]] = Dispatcher[F]
 
+  def cachedThreadPool[F[_]: Async]: Resource[F, ExecutionContext] =
+    Resource.executionContext
+  def fixedThreadPool[F[_]: Async](size: Int): Resource[F, ExecutionContext] =
+    Resource.executionContext
+
   def createServer[F[_]: Async]: Resource[F, H4Server] =
     for {
       conf <- Resource.eval(parser.decodePathF[F, PetStoreConfig]("petstore"))
-      serverEc <- ExecutionContexts.cachedThreadPool[F]
-      connEc <- ExecutionContexts.fixedThreadPool[F](conf.db.connections.poolSize)
-      txnEc <- ExecutionContexts.cachedThreadPool[F]
-      xa <- DatabaseConfig.dbTransactor(conf.db, connEc).evalOn(txnEc)
+//      serverEc <- ExecutionContexts.cachedThreadPool[F]
+      serverEc <- cachedThreadPool[F] // ExecutionContext
+//      connEc <- ExecutionContexts.fixedThreadPool[F](conf.db.connections.poolSize)
+      connEc <- fixedThreadPool[F](conf.db.connections.poolSize)
+//      txnEc <- ExecutionContexts.cachedThreadPool[F]
+      txnEc <- cachedThreadPool[F]
+//      xa <- DatabaseConfig.dbTransactor(conf.db, connEc).evalOn(txnEc)
       key <- Resource.eval(HMACSHA256.generateKey[F])
-      authRepo = DoobieAuthRepositoryInterpreter[F, HMACSHA256](key, xa)
-      petRepo = DoobiePetRepositoryInterpreter[F](xa)
-      orderRepo = DoobieOrderRepositoryInterpreter[F](xa)
-      userRepo = DoobieUserRepositoryInterpreter[F](xa)
+      authRepo = AuthRepositoryInterpreter[F, HMACSHA256](key/*, xa*/)
+      petRepo = PetRepositoryInterpreter[F](/*xa*/)
+      orderRepo = OrderRepositoryInterpreter[F](/*xa*/)
+      userRepo = UserRepositoryInterpreter[F](/*xa*/)
       petValidation = PetValidationInterpreter[F](petRepo)
       petService = PetService[F](petRepo, petValidation)
       userValidation = UserValidationInterpreter[F](userRepo)
