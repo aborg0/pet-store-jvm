@@ -28,7 +28,12 @@ private object AuthSQL {
   //    Put[String].contramap((_: Id[SecureRandomId]).widen)
 
   import ctx.*
-  import io.github.pauljamescleary.petstore.infrastructure.repository.quill.given
+
+  given MappedEncoding[SecureRandomId, String] =
+    MappedEncoding(e => e.toString)
+
+  given MappedEncoding[String, SecureRandomId] =
+    MappedEncoding(SecureRandomId.apply)
 
   def insert[A](jwt: AugmentedJWT[A, Long])(implicit hs: JWSSerializer[JWSMacHeader[A]]): Quoted[Insert[Jwt]] = quote {
     query[Jwt].insertValue(lift(Jwt(jwt.id, jwt.jwt.toEncodedString, jwt.identity, Date.from(jwt.expiry), jwt.lastTouched.map(Date.from))))

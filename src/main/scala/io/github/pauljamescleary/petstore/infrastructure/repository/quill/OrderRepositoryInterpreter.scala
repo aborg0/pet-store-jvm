@@ -20,11 +20,17 @@ private object OrderSQL {
 
   import ctx.*
 
-  val table: Quoted[EntityQuery[Orders]] = quote {
+  given MappedEncoding[OrderStatus, String] =
+    MappedEncoding(_.toString)
+
+  given MappedEncoding[String, OrderStatus] =
+    MappedEncoding(OrderStatus.valueOf)
+
+  val table = quote {
     query[Orders]
   }
 
-  inline def select(orderId: Long): Quoted[EntityQuery[Orders]] = quote {
+  inline def select(orderId: Long) = quote {
     table.filter(_.id == lift(orderId))
   }
 
@@ -34,14 +40,20 @@ private object OrderSQL {
 //    WHERE ID = $orderId
 //  """.query[Order]
 
-  inline def insert(inline order: Order): Quoted[ActionReturning[Orders, Long]] = quote {
-    table.insertValue(lift(Orders(order.id.getOrElse(0L), order.petId, order.shipDate.map(Date.from), order.status, order.complete, order.userId)))
-      .returningGenerated(_.id)
+  inline def insert(order: Orders) = quote {
+    table.dynamic.insertValue(lift(order)).returningGenerated(_.id)
   }
 //    sql"""
 //    INSERT INTO ORDERS (PET_ID, SHIP_DATE, STATUS, COMPLETE, USER_ID)
 //    VALUES (${order.petId}, ${order.shipDate}, ${order.status}, ${order.complete}, ${order.userId.get})
 //  """.update
+
+  def orderToOrders(order: Order): Orders = {
+    Orders(order.id.getOrElse(0L), order.petId, order.shipDate.map(Date.from), order.status, order.complete, order.userId)
+  }
+  def ordersToOrder(order: Orders): Order = {
+    Order(order.petId, order.shipDate.map(_.toInstant), order.status, order.complete, order.id.some, order.userId)
+  }
 
   def delete(orderId: Long) = quote {
     table.filter(_.id == orderId).delete
@@ -56,12 +68,15 @@ private object OrderSQL {
 class OrderRepositoryInterpreter[F[_]: MonadCancelThrow](/*val xa: Transactor[F]*/)
   extends OrderRepositoryAlgebra[F] {
   import OrderSQL.*
+  import OrderSQL.given
   import ctx.*
   import ctx.given
 
-  def create(order: Order): F[Order] =
-    ctx.run(insert(order)).pure[F]
-      .map(id => order.copy(id = id.some))
+  def create(order: Order): F[Order] = {
+    val orders = orderToOrders(order)
+    ctx.run(insert(orders)).pure[F]
+      .map(id => order.copy(id = id.id.some))
+  }
 //      .transact(xa)
 
   def get(orderId: Long): F[Option[Order]] =
