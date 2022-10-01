@@ -14,8 +14,8 @@ private object PetSQL {
     category: String,
     bio: String,
     status: PetStatus = PetStatus.Available,
-    tags: Set[String] = Set.empty,
-    photoUrls: Set[String] = Set.empty,
+    tags: String = "[]",
+    photoUrls: String = "[]",
   )
 
   given MappedEncoding[PetStatus, String] =
@@ -27,20 +27,9 @@ private object PetSQL {
   import io.circe.*
   import io.circe.parser.decode
   import io.circe.syntax.*
-  given MappedEncoding[Set[String], String] =
-    MappedEncoding(_.asJson.toString)
-  given MappedEncoding[List[String], String] =
-    MappedEncoding(_.asJson.toString)
-
-  given MappedEncoding[String, Set[String]] =
-    MappedEncoding(decode[Set[String]](_).leftMap(throw _).merge)
-  given MappedEncoding[String, List[String]] =
-    MappedEncoding(decode[List[String]](_).leftMap(throw _).merge)
-  given MappedEncoding[String, NonEmptyList[String]] =
-    MappedEncoding(decode[NonEmptyList[String]](_).leftMap(throw _).merge)
 
   import ctx.*
-  val table: Quoted[EntityQuery[PetDb]] = quote {
+  inline def table = quote {
     querySchema[PetDb]("pet")
   }
 
@@ -52,16 +41,34 @@ private object PetSQL {
 //  implicit val SetStringMeta: Meta[Set[String]] =
 //    Meta[String].imap(_.split(',').toSet)(_.mkString(","))
 
-  def insert(pet: Pet): Quoted[ActionReturning[PetDb, Long]] = quote {
-    table.insertValue(lift(PetDb(0L, pet.name, pet.category, pet.bio, pet.status, pet.tags, pet.photoUrls))).returning(_.id)
+//  inline def insert(pet: PetDb) = quote {
+//    table.insertValue(lift(pet)).returning(_.id)
+//  }
+
+  def petToPetDb(pet: Pet): PetDb = {
+    PetDb(0L, pet.name, pet.category, pet.bio, pet.status, pet.tags.asJson.toString, pet.photoUrls.asJson.toString)
+  }
+  def dbToPet(p: PetDb):Pet =
+      Pet(
+        p.name,
+        p.category,
+        p.bio,
+        p.status,
+        decode[Set[String]](p.tags).leftMap(throw _).merge,
+        decode[Set[String]](p.photoUrls).leftMap(throw _).merge,
+        p.id.some
+      )
+
+  def insert(pet: Pet) = quote {
+    table.insertValue(lift(petToPetDb(pet))).returningGenerated(_.id)
   }
 //    sql"""
 //    INSERT INTO PET (NAME, CATEGORY, BIO, STATUS, TAGS, PHOTO_URLS)
 //    VALUES (${pet.name}, ${pet.category}, ${pet.bio}, ${pet.status}, ${pet.tags}, ${pet.photoUrls})
 //  """.update
 
-  def update(pet: Pet, id: Long): Quoted[Update[PetDb]] = quote {
-    table.updateValue(lift(PetDb(id, pet.name, pet.category, pet.bio, pet.status, pet.tags, pet.photoUrls)))
+  def update(pet: Pet, id: Long) = quote {
+    table.filter(_.id == id).updateValue(lift(petToPetDb(pet)))
   }
 //    sql"""
 //    UPDATE PET
@@ -69,8 +76,8 @@ private object PetSQL {
 //    WHERE id = $id
 //  """.update
 
-  def select(id: Long): Quoted[EntityQuery[Pet]] = quote {
-    table.filter(_.id == lift(id)).map{ dbToPet }
+  def select(id: Long) = quote {
+    table.filter(_.id == lift(id))//.map{ dbToPet }
   }
 //    sql"""
 //    SELECT NAME, CATEGORY, BIO, STATUS, TAGS, PHOTO_URLS, ID
@@ -78,26 +85,15 @@ private object PetSQL {
 //    WHERE ID = $id
 //  """.query
 
-  private def dbToPet(p: PetDb):Pet =
-      Pet(
-        p.name,
-        p.category,
-        p.bio,
-        p.status,
-        p.tags,
-        p.photoUrls,
-        p.id.some
-      )
-
-  def delete(id: Long): Quoted[Delete[PetDb]] = quote {
+  def delete(id: Long) = quote {
     table.filter(_.id == lift(id)).delete
   }
 //    sql"""
 //    DELETE FROM PET WHERE ID = $id
 //  """.update
 
-  def selectByNameAndCategory(name: String, category: String): Quoted[EntityQuery[Pet]] = quote {
-    table.filter(p => p.name == lift(name) && p.category == lift(category)).map(dbToPet)
+  def selectByNameAndCategory(name: String, category: String) = quote {
+    table.filter(p => p.name == lift(name) && p.category == lift(category))//.map(dbToPet)
   }
 //    sql"""
 //    SELECT NAME, CATEGORY, BIO, STATUS, TAGS, PHOTO_URLS, ID
@@ -105,8 +101,8 @@ private object PetSQL {
 //    WHERE NAME = $name AND CATEGORY = $category
 //  """.query[Pet]
 
-  def selectAll: Quoted[Query[Pet]] = quote {
-    table.sortBy(_.name).map(dbToPet)
+  def selectAll = quote {
+    table.sortBy(_.name)//.map(dbToPet)
   }
 //    sql"""
 //    SELECT NAME, CATEGORY, BIO, STATUS, TAGS, PHOTO_URLS, ID
@@ -115,8 +111,8 @@ private object PetSQL {
 //  """.query
 
 //  import ctx.extras.*
-  def selectByStatus(statuses: NonEmptyList[PetStatus]): Quoted[Query[Pet]] = quote {
-    table.filter(p => lift(statuses).exists(_ == p.status)).map(dbToPet)
+  def selectByStatus(statuses: NonEmptyList[PetStatus]) = quote {
+    table.filter(p => liftQuery(statuses.toList).contains(p.status))//.map(dbToPet)
   }
 //    (
 //      sql"""
@@ -125,11 +121,18 @@ private object PetSQL {
 //      WHERE """ ++ Fragments.in(fr"STATUS", statuses)
 //    ).query
 
-  def selectTagLikeString(tags: NonEmptyList[String]): Quoted[Query[Pet]] = {
+  def selectTagLikeString(tags: NonEmptyList[String]) = {
 //    val likes = tags.map(t => s"%$t%")
+    val firstTag = tags.map(t => s"%$t%").head
+    val tagsLike = tags.map(t => s"%$t%").toList
     quote {
 //      table.filter(p => lazyLift(likes).exists(t => p.tags.like(t)))
-      table.filter(p => lift(tags.map(t => s"%$t%")).exists(t => p.tags.exists(_.like(t)))).map(dbToPet)
+//      table.filter(p => liftQuery(tags.map(t => s"%$t%").toList).exists(t => p.tags.exists(_.like(t)))).map(dbToPet)
+      table.filter(p => {
+//        p.tags.exists(_.like(lift(firstTag)))
+//        tagsLike.exists(t => p.tags.like(t))
+        p.tags.like(firstTag)
+      })//.map(dbToPet)
     }
   }
 //    /* Handle dynamic construction of query based on multiple parameters */
@@ -150,35 +153,34 @@ class PetRepositoryInterpreter[F[_]: MonadCancelThrow](/*val xa: Transactor[F]*/
   import PetSQL.given
   import ctx.*
 
-  def create(pet: Pet): F[Pet] =
+  def create(pet: Pet): F[Pet] = {
+//    val petDb = petToPetDb(pet)
+//    val value = ctx.run(insert(petDb))
+//    value.pure[F].map(id => pet.copy(id = id.some))
     ctx.run(insert(pet)).pure[F].map(id => pet.copy(id = id.some))
+  }
 
   def update(pet: Pet): F[Option[Pet]] =
     OptionT.fromOption(pet.id).semiflatMap(id => ctx.run(PetSQL.update(pet, id)).pure[F].as(pet))
       .value
-//    OptionT
-//      .fromOption[ConnectionIO](pet.id)
-//      .semiflatMap(id => PetSQL.update(pet, id).run.as(pet))
-//      .value
-//      .transact(xa)
 
-  def get(id: Long): F[Option[Pet]] = ctx.run(select(id)).headOption.pure[F]//.transact(xa)
+  def get(id: Long): F[Option[Pet]] = ctx.run(select(id)).headOption.map(dbToPet(_)).pure[F]//.transact(xa)
 
   def delete(id: Long): F[Option[Pet]] =
-    OptionT(ctx.run(select(id)).headOption.pure[F]).semiflatMap(pet => ctx.run(PetSQL.delete(id)).pure[F].as(pet)).value//.transact(xa)
+    OptionT(ctx.run(select(id)).headOption.pure[F]).semiflatMap(pet => ctx.run(PetSQL.delete(id)).pure[F].as(dbToPet(pet))).value//.transact(xa)
 
   def findByNameAndCategory(name: String, category: String): F[Set[Pet]] =
 //    selectByNameAndCategory(name, category).to[List].transact(xa).map(_.toSet)
-    ctx.run(selectByNameAndCategory(name, category)).to(Set).pure[F]
+    ctx.run(selectByNameAndCategory(name, category)).map(dbToPet(_)).to(Set).pure[F]
 
   def list(pageSize: Int, offset: Int): F[List[Pet]] =
-    ctx.run(paginate(pageSize, offset)(selectAll)).to(List).pure[F]//.transact(xa)
+    ctx.run(paginate(pageSize, offset)(selectAll)).to(List).map(dbToPet(_)).to(List).pure[F]//.transact(xa)
 
   def findByStatus(statuses: NonEmptyList[PetStatus]): F[List[Pet]] =
-    ctx.run(selectByStatus(statuses)).to(List).pure[F]//.transact(xa)
+    ctx.run(selectByStatus(statuses)).map(dbToPet(_)).to(List).pure[F]//.transact(xa)
 
   def findByTag(tags: NonEmptyList[String]): F[List[Pet]] =
-    ctx.run(selectTagLikeString(tags)).to(List).pure[F] //.transact(xa)
+    ctx.run(selectTagLikeString(tags)).map(dbToPet(_)).to(List).pure[F] //.transact(xa)
 }
 
 object PetRepositoryInterpreter {

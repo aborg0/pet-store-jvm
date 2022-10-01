@@ -56,7 +56,7 @@ private object UserSQL {
   )
 
   import ctx.*
-  def insert(user: User): Quoted[ActionReturning[Users, Long]] = quote {
+  def insert(user: User) = quote {
     query[Users].insertValue(lift(userToUsers(user))).returningGenerated(_.id)
   }
 //    sql"""
@@ -64,8 +64,8 @@ private object UserSQL {
 //    VALUES (${user.userName}, ${user.firstName}, ${user.lastName}, ${user.email}, ${user.hash}, ${user.phone}, ${user.role})
 //  """.update
 
-  def update(user: User, id: Long): Quoted[Update[Users]] = quote {
-    query[Users].filter(_.id == id).updateValue(lift(userToUsers(user)))
+  def update(user: User, id: Long) = quote {
+    query[Users].filter(_.id == lift(id)).updateValue(lift(userToUsers(user)))
   }
 //    sql"""
 //    UPDATE USERS
@@ -74,8 +74,8 @@ private object UserSQL {
 //    WHERE ID = $id
 //  """.update
 
-  def select(userId: Long): Quoted[EntityQuery[User]] = quote {
-    query[Users].filter(_.id == lift(userId)).map(usersToUser)
+  def select(userId: Long) = quote {
+    query[Users].filter(_.id == lift(userId))//.map(usersToUser)
   }
 //    sql"""
 //    SELECT USER_NAME, FIRST_NAME, LAST_NAME, EMAIL, HASH, PHONE, ID, ROLE
@@ -83,8 +83,8 @@ private object UserSQL {
 //    WHERE ID = $userId
 //  """.query
 
-  def byUserName(userName: String): Quoted[Query[User]] = quote {
-    query[Users].filter(_.userName == lift(userName)).map(usersToUser)
+  def byUserName(userName: String) = quote {
+    query[Users].filter(_.userName == lift(userName))//.map(usersToUser(_))
   }
 //    sql"""
 //    SELECT USER_NAME, FIRST_NAME, LAST_NAME, EMAIL, HASH, PHONE, ID, ROLE
@@ -92,15 +92,15 @@ private object UserSQL {
 //    WHERE USER_NAME = $userName
 //  """.query[User]
 
-  def delete(userId: Long): Quoted[Delete[Users]] = quote {
-    query[Users].filter(_.id == userId).delete
+  def delete(userId: Long) = quote {
+    query[Users].filter(_.id == lift(userId)).delete
   }
 //    sql"""
 //    DELETE FROM USERS WHERE ID = $userId
 //  """.update
 
-  val selectAll: Quoted[Query[User]] = quote {
-    query[Users].map(usersToUser)
+  val selectAll = quote {
+    query[Users]//.map(usersToUser(_))
   }
 //    sql"""
 //    SELECT USER_NAME, FIRST_NAME, LAST_NAME, EMAIL, HASH, PHONE, ID, ROLE
@@ -125,10 +125,10 @@ class UserRepositoryInterpreter[F[_] : MonadCancelThrow](/*val xa: Transactor[F]
       ctx.run(UserSQL.update(user, id)).pure[F]/*.transact(xa)*/.as(user)
     }
 
-  def get(userId: Long): OptionT[F, User] = OptionT(ctx.run(select(userId)).headOption.pure[F]/*.transact(xa)*/)
+  def get(userId: Long): OptionT[F, User] = OptionT(ctx.run(select(userId)).headOption.map(usersToUser(_)).pure[F]/*.transact(xa)*/)
 
   def findByUserName(userName: String): OptionT[F, User] =
-    OptionT(ctx.run(byUserName(userName)).headOption.pure[F])
+    OptionT(ctx.run(byUserName(userName)).headOption.map(usersToUser(_)).pure[F])
 
   def delete(userId: Long): OptionT[F, User] =
     get(userId).semiflatMap(user => ctx.run(UserSQL.delete(userId)).pure[F].as(user))
@@ -137,7 +137,7 @@ class UserRepositoryInterpreter[F[_] : MonadCancelThrow](/*val xa: Transactor[F]
     findByUserName(userName).mapFilter(_.id).flatMap(delete)
 
   def list(pageSize: Int, offset: Int): F[List[User]] =
-    ctx.run(paginate(pageSize, offset)(selectAll)).to(List).pure[F]//.transact(xa)
+    ctx.run(paginate(pageSize, offset)(selectAll)).map(usersToUser(_)).to(List).pure[F]//.transact(xa)
 }
 
 object UserRepositoryInterpreter {
