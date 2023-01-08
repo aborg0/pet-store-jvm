@@ -59,7 +59,7 @@ private object PetSQL {
         p.id.some
       )
 
-  def insert(pet: Pet) = quote {
+  def insert(pet: Pet): Quoted[ActionReturning[PetDb, Long]] = quote {
     table.insertValue(lift(petToPetDb(pet))).returningGenerated(_.id)
   }
 //    sql"""

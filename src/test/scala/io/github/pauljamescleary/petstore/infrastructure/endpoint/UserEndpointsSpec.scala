@@ -95,7 +95,7 @@ class UserEndpointsSpec
     forAll { (userSignup: SignupRequest) =>
       (for {
         loginResp <- signUpAndLogInAsCustomer(userSignup, userEndpoint)
-        (createdUser, Some(authorization)) = loginResp
+        (createdUser, Some(authorization)) = loginResp: @unchecked
         deleteRequest = DELETE(Uri.unsafeFromString(s"/users/${createdUser.userName}"))
         deleteRequestAuth = deleteRequest.putHeaders(authorization)
         deleteResponse <- userEndpoint.run(deleteRequestAuth)
@@ -105,7 +105,7 @@ class UserEndpointsSpec
     forAll { (userSignup: SignupRequest) =>
       (for {
         loginResp <- signUpAndLogInAsAdmin(userSignup, userEndpoint)
-        (createdUser, Some(authorization)) = loginResp
+        (createdUser, Some(authorization)) = loginResp: @unchecked
         deleteRequest = DELETE(Uri.unsafeFromString(s"/users/${createdUser.userName}"))
         deleteRequestAuth = deleteRequest.putHeaders(authorization)
         deleteResponse <- userEndpoint.run(deleteRequestAuth)

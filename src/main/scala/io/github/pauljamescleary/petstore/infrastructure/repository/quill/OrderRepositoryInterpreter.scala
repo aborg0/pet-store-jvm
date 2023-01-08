@@ -30,21 +30,11 @@ private object OrderSQL {
     query[Orders]
   }
 
-  def select(orderId: Long): Quoted[EntityQuery[Orders]] = quote {
-    table.filter(_.id == lift(orderId))
-  }
-
   def orderToOrders(order: Order): Orders =
     Orders(order.id.getOrElse(0L), order.petId, order.shipDate.map(Date.from), order.status, order.complete, order.userId)
 
   def ordersToOrder(order: Orders): Order =
     Order(order.petId, order.shipDate.map(_.toInstant), order.status, order.complete, order.id.some, order.userId)
-
-  //    sql"""
-//    SELECT PET_ID, SHIP_DATE, STATUS, COMPLETE, ID, USER_ID
-//    FROM ORDERS
-//    WHERE ID = $orderId
-//  """.query[Order]
 
   def insert(order: Order) = quote {
     table.insertValue(lift(orderToOrders(order))).returningGenerated(_.id)
@@ -53,6 +43,15 @@ private object OrderSQL {
 //    INSERT INTO ORDERS (PET_ID, SHIP_DATE, STATUS, COMPLETE, USER_ID)
 //    VALUES (${order.petId}, ${order.shipDate}, ${order.status}, ${order.complete}, ${order.userId.get})
 //  """.update
+
+  def select(orderId: Long): Quoted[EntityQuery[Orders]] = quote {
+    table.filter(_.id == lift(orderId))
+  }
+  //    sql"""
+//    SELECT PET_ID, SHIP_DATE, STATUS, COMPLETE, ID, USER_ID
+//    FROM ORDERS
+//    WHERE ID = $orderId
+//  """.query[Order]
 
   def delete(orderId: Long) = quote {
     table.filter(_.id == lift(orderId)).delete
@@ -72,9 +71,8 @@ class OrderRepositoryInterpreter[F[_]: MonadCancelThrow](/*val xa: Transactor[F]
 //  import ctx.given
 
   // FIXME This causes to compilation issue
-  def create(order: Order): F[Order] = {
-     ctx.run(insert(order)).pure[F].map(id => order.copy(id = id.id.some))
-  }
+  def create(order: Order): F[Order] =
+    ctx.run(insert(order)).pure[F].map(id => order.copy(id = id.some))
 
   def get(orderId: Long): F[Option[Order]] =
     ctx.run(OrderSQL.select(orderId)).headOption.pure[F].map(opt => opt.map(ordersToOrder)) //.transact(xa)

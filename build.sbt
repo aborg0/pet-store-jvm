@@ -3,9 +3,9 @@ name := "scala-pet-store"
 version := "0.0.1-SNAPSHOT"
 //crossScalaVersions := Seq("3.1.2")
 
-/*ThisBuild / */scalaVersion := "3.1.2"
+/*ThisBuild / */scalaVersion := "3.2.1"
 
-resolvers += Resolver.sonatypeRepo("snapshots")
+resolvers ++= Resolver.sonatypeOssRepos("snapshots")
 
 val CatsVersion = "2.8.0"
 val CirceVersion = "0.14.2"
@@ -31,7 +31,7 @@ libraryDependencies ++= Seq(
 //  "io.circe" %% "circe-generic-extras" % CirceGenericExVersion,
   "io.circe" %% "circe-parser" % CirceVersion,
   "com.hunorkovacs" %% "circe-config" % CirceConfigVersion,
-  "io.getquill" %% "quill-jdbc" % "4.5.0" exclude("org.scalameta", "scalafmt-core_2.13"),
+  "io.getquill" %% "quill-jdbc" % "4.6.0" exclude("org.scalameta", "scalafmt-core_2.13"),
 //  "org.tpolecat" %% "doobie-h2" % DoobieVersion,
 //  "org.tpolecat" %% "doobie-scalatest" % DoobieVersion,
 //  "org.tpolecat" %% "doobie-hikari" % DoobieVersion,
